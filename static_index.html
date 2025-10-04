@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>📦 Storage Monitor</title>
+  <meta charset="utf-8" />
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .box { border: 1px solid #ccc; padding: 15px; border-radius: 10px; width: 400px; }
+    progress { width: 100%; }
+    ul { list-style: none; padding: 0; }
+    li { margin: 5px 0; }
+    button { margin-left: 10px; }
+  </style>
+  <script>
+    async function update() {
+      // capacity + usage
+      const res = await fetch("/total");
+      const data = await res.json();
+      document.getElementById("capacity").innerText = data.total_capacity + " MB";
+      document.getElementById("usage").innerText = data.total_usage.toFixed(2) + " MB";
+      document.getElementById("percent").innerText =
+        ((data.total_usage / data.total_capacity) * 100).toFixed(1) + "%";
+      document.getElementById("progress").value = data.total_usage;
+      document.getElementById("progress").max = data.total_capacity;
+
+      // file list
+      const filesRes = await fetch("/files");
+      const files = await filesRes.json();
+      const list = document.getElementById("fileList");
+      list.innerHTML = "";
+      files.forEach(file => {
+        const li = document.createElement("li");
+        li.textContent = file;
+        const downloadBtn = document.createElement("button");
+        downloadBtn.textContent = "⬇️ Download";
+        downloadBtn.onclick = () => window.location = "/download/" + file;
+        li.appendChild(downloadBtn);
+        list.appendChild(li);
+      });
+    }
+    setInterval(update, 5000);
+    window.onload = update;
+
+    async function uploadFile() {
+      const fileInput = document.getElementById("file");
+      const file = fileInput.files[0];
+      if (!file) return alert("Select a file first");
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      alert(JSON.stringify(data));
+      update();
+    }
+  </script>
+</head>
+<body>
+  <h1>📦 Storage Monitor</h1>
+  <div class="box">
+    <p><b>Total Capacity:</b> <span id="capacity">...</span></p>
+    <p><b>Used:</b> <span id="usage">...</span></p>
+    <p><b>Usage %:</b> <span id="percent">...</span></p>
+    <progress id="progress" value="0" max="100"></progress>
+  </div>
+
+  <h2>📤 Upload File</h2>
+  <input type="file" id="file" />
+  <button onclick="uploadFile()">Upload</button>
+
+  <h2>📂 Files</h2>
+  <ul id="fileList"></ul>
+</body>
+</html>
